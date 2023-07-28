@@ -2,10 +2,12 @@ extern crate core;
 
 mod pb;
 
+use pb::antelope;
 use prost::Message;
 use chrono::*;
 
 use crate::pb::pinax::service::v1::*;
+use crate::pb::antelope::antelope_block_meta::v1::*;
 use substreams::proto;
 use substreams_sink_kv::prelude::*;
 
@@ -13,76 +15,65 @@ use substreams_sink_kv::prelude::*;
 use wasmedge_bindgen::*;
 use wasmedge_bindgen_macro::*;
 
-fn get_key_by_prefix(prefix: String) -> Result<String, String> {
+#[wasmedge_bindgen]
+pub fn pinax_service_v1_antelopereliability_countmissingblocks(v: Vec<u8>) -> Result<Vec<u8>, String> {
+    let req = CountMissingBlocksRequest::decode(&v[..]).expect("[BlockRangeRequest] Failed to decode");
     let store = Store::new();
 
-    match store.prefix(prefix.clone(), Some(1)).pairs.first() {
-        Some(kv_pair) => Ok(kv_pair.key.clone()),
-        None => Err(format!("Prefix not found in DB: {:?}", prefix))
-    }
-}
+    let kv_pairs = store.scan(format!("date: {}", req.start_date), format!("date: {}", req.end_date), Some(0 as u32));
 
-fn safe_get_from_store(key: String) -> Result<Vec<u8>, String> {
-    let store = Store::new();
+    let mut missing_block_times: Vec<MissingBlockTime> = Vec::new();
 
-    match store.get(key.clone()) {
-        Some(out) => Ok(out.value),
-        None => Err(format!("Key not found in DB: {:?}", key))
-    }
-}
+    let mut missing_blocks = 0;
+    for i in 0..kv_pairs.pairs.len() - 1 {
+        let current_block = value_to_block(&kv_pairs.pairs[i].value).unwrap();
+        let next_block = value_to_block(&kv_pairs.pairs[i + 1].value).unwrap();
 
-#[wasmedge_bindgen]
-pub fn pinax_service_v1_blocktime_blockidbytime(v: Vec<u8>) -> Result<Vec<u8>, String> {
-    let req = BlockIdRequest::decode(&v[..]).expect("[BlockIdRequest] Failed to decode");
-
-    let key = match req.timestamp.parse::<DateTime<Utc>>() {
-        Ok(_) => format!("block.timestamp:{}", req.timestamp),
-        Err(_) => get_key_by_prefix(format!("block.timestamp:{}", req.timestamp))?
-    };
-
-    safe_get_from_store(key)
-}
-
-#[wasmedge_bindgen]
-pub fn pinax_service_v1_blocktime_blocktimebyid(v: Vec<u8>) -> Result<Vec<u8>, String> {
-    let req = BlockTimestampRequest::decode(&v[..]).expect("[BlockTimestampRequest] Failed to decode");
-
-    // TODO: Query by block number or id (requires store change upstream)
-
-    let key = format!("block.number:{}", req.number);
-
-    safe_get_from_store(key)
-}
-
-#[wasmedge_bindgen]
-pub fn pinax_service_v1_blocktime_blockrangebydate(v: Vec<u8>) -> Result<Vec<u8>, String> {
-    let req = BlockRangeRequest::decode(&v[..]).expect("[BlockRangeRequest] Failed to decode");
-
-    let first_key = get_key_by_prefix(format!("block.timestamp:{}", req.first_date))?;
-    let second_key = match req.second_date {
-        Some(second_date) => get_key_by_prefix(format!("block.timestamp:{}", second_date))?,
-        None => {
-            let datetime_utc = match NaiveDate::parse_from_str(&req.first_date, "%Y-%m-%d") {
-                // Try to parse naive date
-                Ok(naive_date) => Ok(DateTime::<Utc>::from_utc(naive_date.and_hms_opt(0, 0, 0).unwrap(), Utc)),
-                // Else assume we got a full timestamp
-                Err(_) => req.first_date.parse::<DateTime<Utc>>().map_err(
-                    |e| format!("{:?} -- Wrong `first_date` format, expecting date or timestamp: {:?}", e, req.first_date)
-                )
-            }?;
-            // Get next day after `first_date`
-            let next_day_dt = datetime_utc + Duration::days(1);
-
-            get_key_by_prefix(format!("block.timestamp:{}", next_day_dt.format("%Y-%m-%d").to_string()))?
+        let mut count = count_half_second_differences(&current_block.timestamp, &next_block.timestamp);
+        if count > 1 {
+            count = count -1;
+            //log::info!("Missing blocks: {}", count);
+            missing_block_times.push(MissingBlockTime {
+                number: count.to_string(),
+                date_time: current_block.timestamp,
+            });
         }
+    }
+
+    if missing_block_times.len() == 0 {
+        missing_block_times.push(MissingBlockTime {
+            number: "0".to_string(),
+            date_time: "no date".to_string(),
+        });
+    }
+    let mut out = MissingBlocks {
+        missing_blocks: missing_block_times,
     };
 
-    let out = BlockRange {
-        range: vec![
-            proto::decode::<BlockId>(&safe_get_from_store(first_key)?).unwrap(),
-            proto::decode::<BlockId>(&safe_get_from_store(second_key)?).unwrap()
-        ]
-    };
 
     return Ok(out.encode_to_vec());
+}
+
+ 
+pub fn value_to_block(v: &Vec<u8>) -> Option<AntelopeBlockMeta> {
+    let antelope_block_meta = AntelopeBlockMeta::decode(&v[..]).expect("failed to decode blockmeta");
+
+    let mut blk = AntelopeBlockMeta {
+        hash: antelope_block_meta.hash,
+        producer: antelope_block_meta.producer,
+        current_schedule: antelope_block_meta.current_schedule,
+        timestamp: antelope_block_meta.timestamp,
+    };
+
+    return Some(blk);
+}
+
+fn count_half_second_differences(date_str1: &str, date_str2: &str) -> i32 {
+    let date_time1 = Utc.datetime_from_str(date_str1, "%Y-%m-%dT%H:%M:%S%.3fZ").unwrap();
+    let date_time2 = Utc.datetime_from_str(date_str2, "%Y-%m-%dT%H:%M:%S%.3fZ").unwrap();
+
+    let duration = date_time2 - date_time1;
+    let half_second_diff = Duration::milliseconds(500);
+
+    (duration.num_milliseconds() / half_second_diff.num_milliseconds()) as i32
 }

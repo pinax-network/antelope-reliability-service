@@ -2,34 +2,20 @@ syntax = "proto3";
 
 package pinax.service.v1;
 
-service BlockTime {
-  rpc BlockIdByTime(BlockIdRequest) returns (BlockId);
-  rpc BlockTimeById(BlockTimestampRequest) returns (BlockTimestamp);
-  rpc BlockRangeByDate(BlockRangeRequest) returns (BlockRange);
+service AntelopeReliability {
+  rpc CountMissingBlocks(CountMissingBlocksRequest) returns (MissingBlocks);
 }
 
-message BlockIdRequest {
-  string timestamp = 1;
+message CountMissingBlocksRequest {
+  string start_date = 1;
+  string end_date = 2;
 }
 
-message BlockTimestampRequest {
-  uint64 number = 1;
+message MissingBlocks {
+  repeated MissingBlockTime missing_blocks = 1;
 }
 
-message BlockRangeRequest {
-  string first_date = 1;
-  optional string second_date = 2;
-}
-
-message BlockId {
-  string id = 1;
-  uint64 number = 2;
-}
-
-message BlockTimestamp {
-  string timestamp = 1;
-}
-
-message BlockRange {
-  repeated BlockId range = 1;
+message MissingBlockTime {
+  string number = 1;
+  string date_time = 2;
 }

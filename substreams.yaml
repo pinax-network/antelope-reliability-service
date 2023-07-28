@@ -6,6 +6,7 @@ package:
 imports:
   sink_kv: https://github.com/streamingfast/substreams-sink-kv/releases/download/v0.1.2/substreams-sink-kv-v0.1.2.spkg
   common: https://github.com/pinax-network/substreams/releases/download/common-v0.6.0/common-v0.6.0.spkg
+  antelope: https://github.com/pinax-network/substreams-antelope-reliability-tracker/releases/download/v0.0.7/substreams-antelope-reliability-tracker-v1.0.0.spkg
 
 protobuf:
   files:
@@ -14,8 +15,8 @@ protobuf:
     - ./proto
 
 sink:
-  module: common:kv_out
+  module: antelope:kv_out
   type: sf.substreams.sink.kv.v1.WASMQueryService
   config:
     wasmQueryModule: "@@./blocktime.wasm"
-    grpcService: "pinax.service.v1.BlockTime"
+    grpcService: "pinax.service.v1.AntelopeReliability"

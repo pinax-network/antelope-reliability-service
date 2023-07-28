@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package antelope.antelope_block_meta.v1;
+
+message AntelopeBlockMeta {
+    string hash = 1;
+    string producer = 2;
+    repeated string current_schedule = 3;
+    string timestamp = 4;
+}

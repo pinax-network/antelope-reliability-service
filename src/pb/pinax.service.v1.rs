@@ -1,42 +1,24 @@
 // @generated
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BlockIdRequest {
+pub struct CountMissingBlocksRequest {
     #[prost(string, tag="1")]
-    pub timestamp: ::prost::alloc::string::String,
+    pub start_date: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub end_date: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BlockTimestampRequest {
-    #[prost(uint64, tag="1")]
-    pub number: u64,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BlockRangeRequest {
-    #[prost(string, tag="1")]
-    pub first_date: ::prost::alloc::string::String,
-    #[prost(string, optional, tag="2")]
-    pub second_date: ::core::option::Option<::prost::alloc::string::String>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BlockId {
-    #[prost(string, tag="1")]
-    pub id: ::prost::alloc::string::String,
-    #[prost(uint64, tag="2")]
-    pub number: u64,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BlockTimestamp {
-    #[prost(string, tag="1")]
-    pub timestamp: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BlockRange {
+pub struct MissingBlocks {
     #[prost(message, repeated, tag="1")]
-    pub range: ::prost::alloc::vec::Vec<BlockId>,
+    pub missing_blocks: ::prost::alloc::vec::Vec<MissingBlockTime>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MissingBlockTime {
+    #[prost(string, tag="1")]
+    pub number: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub date_time: ::prost::alloc::string::String,
 }
 // @@protoc_insertion_point(module)
