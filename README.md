@@ -1,4 +1,4 @@
-# Blocktime Query Service
+# Antelope Reliability Query Service
 
 gRPC service for querying the number of missing blocks on the Antelope chain.
 
@@ -16,7 +16,7 @@ You can install the [`kvdb`](https://github.com/streamingfast/kvdb) tool to insp
 go install github.com/streamingfast/kvdb/cmd/kvdb@develop
 ```
 
-**To inspect the *Timestamp > BlockId* data**
+**To count missing blocks between a starting date and an ending date data**
 ```bash
 kvdb read prefix kdate --dsn "badger3://$(pwd)/badger_data.db" --decoder="proto://./proto/antelope_block_meta.proto@antelope.antelope_block_meta.v1.AntelopeBlockMeta"
 ```
