@@ -21,6 +21,9 @@ pub fn pinax_service_v1_antelopereliability_countmissingblocks(v: Vec<u8>) -> Re
     let store = Store::new();
 
     let kv_pairs = store.scan(format!("date: {}", req.start_date), format!("date: {}", req.end_date), Some(0 as u32));
+    if kv_pairs.pairs.is_empty() {
+        return Err("Date not found".to_string());
+    }
 
     let mut missing_block_times: Vec<MissingBlockTime> = Vec::new();
 
@@ -31,7 +34,7 @@ pub fn pinax_service_v1_antelopereliability_countmissingblocks(v: Vec<u8>) -> Re
 
         let mut count = count_half_second_differences(&current_block.timestamp, &next_block.timestamp);
         if count > 1 {
-            count = count -1;
+            //count = count -1;
             //log::info!("Missing blocks: {}", count);
             missing_block_times.push(MissingBlockTime {
                 number: count.to_string(),
